@@ -12,6 +12,7 @@ fn main() {
     } else {
         let mut chip = Chip8::new();
         let filename = &args[1];
+
         match chip.load_file(filename) {
             Ok(_) => chip.play(),
             Err(err) => println!("{}", err),

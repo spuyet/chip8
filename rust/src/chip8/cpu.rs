@@ -32,7 +32,7 @@ impl Cpu {
         }
     }
 
-    pub fn step(&mut self, memory: &[u8], screen: &mut [u64]) {
+    pub fn step(&mut self, memory: &mut [u8], screen: &mut [u64]) {
         let pc = self.pc as usize;
         let opcode = &memory[pc..(pc+2)];
 
@@ -41,17 +41,16 @@ impl Cpu {
             0x0 => println!("0x0"),
             0x1 => println!("0x1"),
             0x2 => {
-                println!("0x2");
                 self.stack[self.sp as usize] = self.pc;
                 self.sp += 1;
-                let mut pc = ((opcode[0] & 0x0F) as u16) << 8;
+                let mut pc = ((opcode[0] & 0xF) as u16) << 8;
                 pc |= opcode[1] as u16;
                 self.pc = pc;
             }
             0x3 => println!("0x3"),
             0x4 => println!("0x4"),
             0x5 => println!("0x5"),
-            0x6 => self.registers[(opcode[0] & 0x0F) as usize] = opcode[1],         // 6xkk - LD Vx, byte
+            0x6 => self.registers[(opcode[0] & 0xF) as usize] = opcode[1],         // 6xkk - LD Vx, byte
             0x7 => println!("0x7"),
             0x8 => println!("0x8"),
             0x9 => println!("0x9"),
@@ -63,12 +62,32 @@ impl Cpu {
             0xC => println!("0xC"),
             0xD => self.screen_update(opcode, memory, screen),
             0xE => println!("0xE"),
-            0xF => println!("0xF"),
+            0xF => self.fx_instruction(opcode[1], opcode[0] & 0xF, memory),
             _ => ()
         }
+        println!("pc: {:?}", self.pc);
         println!("{:?}", self.registers);
-        println!("{:x}", self.i);
         self.pc += 2;
+    }
+
+    fn fx_instruction(&mut self, instruction: u8, register: u8, memory: &mut [u8]) {
+        match instruction {
+            0x29 => self.i = (register * 5) as u16,
+            0x33 => {
+                let v = self.registers[register as usize];
+                memory[self.i as usize] = (v / 100) as u8;
+                memory[(self.i + 1) as usize] = (v / 10 % 10) as u8;
+                memory[(self.i + 2) as usize] = (v % 100 % 10) as u8;
+            },
+            0x65 => {
+                let mut count = self.i as usize;
+                for i in 0..(register + 1) {
+                    self.registers[i as usize] = memory[count];
+                    count += 1;
+                }
+            }
+            _ => ()
+        }
     }
 
     fn screen_update(&mut self, opcode: &[u8], memory: &[u8], screen: &mut [u64]) {
