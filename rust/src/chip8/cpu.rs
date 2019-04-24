@@ -38,35 +38,45 @@ impl Cpu {
 
         println!("{:x?}", opcode);
         match opcode[0] >> 4 {
-            0x0 => println!("0x0"),
+            0x0 => println!("0x0 => ignored"),                                                                      // 0nnn - SYS addr
             0x1 => println!("0x1"),
-            0x2 => {
+            0x2 => {                                                                                                // 2nnn - CALL addr
                 self.stack[self.sp as usize] = self.pc;
                 self.sp += 1;
                 let mut pc = ((opcode[0] & 0xF) as u16) << 8;
                 pc |= opcode[1] as u16;
                 self.pc = pc;
+                return
             }
             0x3 => println!("0x3"),
             0x4 => println!("0x4"),
             0x5 => println!("0x5"),
-            0x6 => self.registers[(opcode[0] & 0xF) as usize] = opcode[1],         // 6xkk - LD Vx, byte
-            0x7 => println!("0x7"),
-            0x8 => println!("0x8"),
+            0x6 => self.registers[(opcode[0] & 0xF) as usize] = opcode[1],                                          // 6xkk - LD Vx, byte
+            0x7 => self.registers[(opcode[0] & 0xF) as usize] += opcode[1],                                         // 7xkk - ADD Vx, byte
+            0x8 => {
+                match opcode[1] & 0xF {
+                    0x0 => self.registers[(opcode[0] & 0xF) as usize] = self.registers[(opcode[1] >> 4) as usize], // 8xy0 - LD Vx, Vy
+                    _ => ()
+                }
+            }
             0x9 => println!("0x9"),
-            0xA => {                                                               // LD I, addr
+            0xA => {                                                                                               // Annn - LD I, addr
                 self.i = ((opcode[0] & 0xF) as u16) << 8;
                 self.i |= opcode[1] as u16;
             }
             0xB => println!("0xB"),
             0xC => println!("0xC"),
-            0xD => self.screen_update(opcode, memory, screen),
+            0xD => self.screen_update(opcode, memory, screen),                                                     // Dxyn - DRW Vx, Vy, nibble
             0xE => println!("0xE"),
             0xF => self.fx_instruction(opcode[1], opcode[0] & 0xF, memory),
             _ => ()
         }
-        println!("pc: {:?}", self.pc);
-        println!("{:?}", self.registers);
+        println!("registers: {:x?}", self.registers);
+        println!("stack: {:x?}", self.stack);
+        println!("pc: {:x?}", self.pc);
+        println!("I: {:x?}", self.i);
+        println!("memory: {:x?}", memory);
+        println!("\n");
         self.pc += 2;
     }
 
